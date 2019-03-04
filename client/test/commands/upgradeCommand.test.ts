@@ -98,15 +98,6 @@ describe('UpgradeCommand', () => {
 
             fabricRuntimeMock.getInstantiatedChaincode.resolves([{ name: 'biscuit-network', version: '0.0.1' }]);
 
-            fabricRuntimeMock.getMetadata.resolves({
-                contracts: {
-                    'my-contract' : {
-                        name: 'my-contract',
-                        transactions: [],
-                    }
-                }
-            });
-
             showChaincodeAndVersionQuickPick = mySandBox.stub(UserInputUtil, 'showChaincodeAndVersionQuickPick').withArgs(sinon.match.any, new Set(['peerOne'])).resolves(
                 {
                     label: 'biscuit-network@0.0.2',

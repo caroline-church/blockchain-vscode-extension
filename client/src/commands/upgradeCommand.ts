@@ -14,7 +14,7 @@
 'use strict';
 import * as vscode from 'vscode';
 import { IBlockchainQuickPickItem, UserInputUtil } from './UserInputUtil';
-import { IFabricConnection } from '../fabric/IFabricConnection';
+import { IFabricRuntimeConnection } from '../fabric/IFabricRuntimeConnection';
 import { Reporter } from '../util/Reporter';
 import { PackageRegistryEntry } from '../packages/PackageRegistryEntry';
 import { VSCodeBlockchainOutputAdapter } from '../logging/VSCodeBlockchainOutputAdapter';
@@ -126,7 +126,7 @@ export async function upgradeSmartContract(treeItem?: BlockchainTreeItem): Promi
         }, async (progress: vscode.Progress<{message: string}>) => {
 
             progress.report({message: 'Upgrading Smart Contract'});
-            const connection: IFabricConnection = await FabricRuntimeManager.instance().getConnection();
+            const connection: IFabricRuntimeConnection = await FabricRuntimeManager.instance().getConnection();
 
             if (packageEntry) {
                 // If the package has been installed as part of this command

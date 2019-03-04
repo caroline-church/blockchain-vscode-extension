@@ -18,7 +18,7 @@ import { CertificateAuthorityTreeItem } from '../explorer/runtimeOps/Certificate
 import { VSCodeBlockchainOutputAdapter } from '../logging/VSCodeBlockchainOutputAdapter';
 import { LogType } from '../logging/OutputAdapter';
 import { UserInputUtil } from './UserInputUtil';
-import { IFabricConnection } from '../fabric/IFabricConnection';
+import { IFabricRuntimeConnection } from '../fabric/IFabricRuntimeConnection';
 import { FabricRuntimeManager } from '../fabric/FabricRuntimeManager';
 import { IFabricWallet } from '../fabric/IFabricWallet';
 import { FabricRuntime } from '../fabric/FabricRuntime';
@@ -28,6 +28,7 @@ export async function createNewIdentity(certificateAuthorityTreeItem?: Certifica
     const outputAdapter: VSCodeBlockchainOutputAdapter = VSCodeBlockchainOutputAdapter.instance();
     outputAdapter.log(LogType.INFO, undefined, 'createNewIdentity');
 
+    let certificateAuthorityName: string;
     if (!certificateAuthorityTreeItem) {
         // Command called from the command palette or elsewhere
         // Check runtime is running
@@ -41,10 +42,12 @@ export async function createNewIdentity(certificateAuthorityTreeItem?: Certifica
             }
         }
         // Ask which certificate authority to use
-        const certificateAuthorityName: string = await UserInputUtil.showCertificateAuthorityQuickPickBox('Choose certificate authority to create a new identity with');
+        certificateAuthorityName = await UserInputUtil.showCertificateAuthorityQuickPickBox('Choose certificate authority to create a new identity with');
         if (!certificateAuthorityName) {
             return;
         }
+    } else {
+        certificateAuthorityName = certificateAuthorityTreeItem.name;
     }
 
     // Ask for identity name
@@ -53,7 +56,7 @@ export async function createNewIdentity(certificateAuthorityTreeItem?: Certifica
         return;
     }
 
-    let connection: IFabricConnection;
+    let connection: IFabricRuntimeConnection;
 
     try {
         const mspid: string = 'Org1MSP';
@@ -71,7 +74,7 @@ export async function createNewIdentity(certificateAuthorityTreeItem?: Certifica
         connection = FabricConnectionFactory.createFabricRuntimeConnection(runtime);
         // Connect and then register the user
         await connection.connect(wallet, adminName);
-        const secret: string = await connection.register(identityName, affiliation);
+        const secret: string = await connection.register(certificateAuthorityName, identityName, affiliation);
 
         // Enroll the user
         const details: { certificate: string, privateKey: string } = await connection.enroll(identityName, secret);
@@ -82,12 +85,9 @@ export async function createNewIdentity(certificateAuthorityTreeItem?: Certifica
         await vscode.commands.executeCommand(ExtensionCommands.REFRESH_GATEWAYS);
         outputAdapter.log(LogType.SUCCESS, 'Successfully added identity', `Successfully added ${identityName} to runtime gateway`);
 
-        await connection.disconnect();
         return;
     } catch (error) {
         outputAdapter.log(LogType.ERROR, `Issue creating new identity: ${error.message}`, `Issue creating new identity: ${error.toString()}`);
-
-        await connection.disconnect();
         return;
     }
 }

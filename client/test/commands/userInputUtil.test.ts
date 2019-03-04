@@ -24,6 +24,7 @@ import * as sinon from 'sinon';
 import * as sinonChai from 'sinon-chai';
 import { FabricConnectionManager } from '../../src/fabric/FabricConnectionManager';
 import { FabricClientConnection } from '../../src/fabric/FabricClientConnection';
+import { FabricRuntimeConnection } from '../../src/fabric/FabricRuntimeConnection';
 import { PackageRegistryEntry } from '../../src/packages/PackageRegistryEntry';
 import { PackageRegistry } from '../../src/packages/PackageRegistry';
 import * as fs from 'fs-extra';
@@ -46,8 +47,8 @@ describe('userInputUtil', () => {
     let identities: string[];
 
     let getConnectionStub: sinon.SinonStub;
-    let fabricConnectionStub: sinon.SinonStubbedInstance<FabricClientConnection>;
-    let getLocalFabricConnectionStub: sinon.SinonStub;
+    let fabricClientConnectionStub: sinon.SinonStubbedInstance<FabricClientConnection>;
+    let fabricRuntimeConnectionStub: sinon.SinonStubbedInstance<FabricRuntimeConnection>;
 
     const env: NodeJS.ProcessEnv = Object.assign({}, process.env);
 
@@ -116,26 +117,32 @@ describe('userInputUtil', () => {
         const fabricConnectionManager: FabricConnectionManager = FabricConnectionManager.instance();
         const fabricRuntimeManager: FabricRuntimeManager = FabricRuntimeManager.instance();
 
-        fabricConnectionStub = sinon.createStubInstance(FabricClientConnection);
-        fabricConnectionStub.getAllPeerNames.returns(['myPeerOne', 'myPeerTwo']);
+        fabricRuntimeConnectionStub = sinon.createStubInstance(FabricRuntimeConnection);
+        fabricClientConnectionStub = sinon.createStubInstance(FabricClientConnection);
+        fabricRuntimeConnectionStub.getAllPeerNames.returns(['myPeerOne', 'myPeerTwo']);
+        fabricClientConnectionStub.getAllPeerNames.returns(['myPeerOne', 'myPeerTwo']);
 
-        fabricConnectionStub.getAllChannelsForPeer.withArgs('myPeerOne').resolves(['channelOne']);
-        fabricConnectionStub.getAllChannelsForPeer.withArgs('myPeerTwo').resolves(['channelOne', 'channelTwo']);
+        fabricRuntimeConnectionStub.getAllChannelsForPeer.withArgs('myPeerOne').resolves(['channelOne']);
+        fabricClientConnectionStub.getAllChannelsForPeer.withArgs('myPeerOne').resolves(['channelOne']);
+        fabricRuntimeConnectionStub.getAllChannelsForPeer.withArgs('myPeerTwo').resolves(['channelOne', 'channelTwo']);
+        fabricClientConnectionStub.getAllChannelsForPeer.withArgs('myPeerTwo').resolves(['channelOne', 'channelTwo']);
 
         const chaincodeMap: Map<string, Array<string>> = new Map<string, Array<string>>();
         chaincodeMap.set('biscuit-network', ['0.0.1', '0.0.2']);
         chaincodeMap.set('cake-network', ['0.0.3']);
-        fabricConnectionStub.getInstalledChaincode.withArgs('myPeerOne').resolves(chaincodeMap);
-        fabricConnectionStub.getInstalledChaincode.withArgs('myPeerTwo').resolves(new Map<string, Array<string>>());
-        fabricConnectionStub.getInstantiatedChaincode.withArgs('channelOne').resolves([{ name: 'biscuit-network', channel: 'channelOne', version: '0.0.1' }, { name: 'cake-network', channel: 'channelOne', version: '0.0.3' }]);
-        fabricConnectionStub.getCertificateAuthorityName.resolves('ca.example.cake.com');
+        fabricRuntimeConnectionStub.getInstalledChaincode.withArgs('myPeerOne').resolves(chaincodeMap);
+        fabricRuntimeConnectionStub.getInstalledChaincode.withArgs('myPeerTwo').resolves(new Map<string, Array<string>>());
+        fabricRuntimeConnectionStub.getInstantiatedChaincode.withArgs('channelOne').resolves([{ name: 'biscuit-network', channel: 'channelOne', version: '0.0.1' }, { name: 'cake-network', channel: 'channelOne', version: '0.0.3' }]);
+        fabricClientConnectionStub.getInstantiatedChaincode.withArgs('channelOne').resolves([{ name: 'biscuit-network', channel: 'channelOne', version: '0.0.1' }, { name: 'cake-network', channel: 'channelOne', version: '0.0.3' }]);
+        fabricRuntimeConnectionStub.getCertificateAuthorityNames.resolves(['ca.example.cake.com']);
 
         const chaincodeMapTwo: Map<string, Array<string>> = new Map<string, Array<string>>();
 
-        fabricConnectionStub.getInstantiatedChaincode.withArgs('channelTwo').resolves(chaincodeMapTwo);
+        getConnectionStub = fabricRuntimeConnectionStub.getInstantiatedChaincode.withArgs('channelTwo').resolves(chaincodeMapTwo);
+        fabricClientConnectionStub.getInstantiatedChaincode.withArgs('channelTwo').resolves(chaincodeMapTwo);
 
-        getConnectionStub = mySandBox.stub(fabricConnectionManager, 'getConnection').returns(fabricConnectionStub);
-        getLocalFabricConnectionStub = mySandBox.stub(fabricRuntimeManager, 'getConnection').returns(fabricConnectionStub);
+        mySandBox.stub(fabricConnectionManager, 'getConnection').returns(fabricClientConnectionStub);
+        mySandBox.stub(fabricRuntimeManager, 'getConnection').returns(fabricRuntimeConnectionStub);
 
         quickPickStub = mySandBox.stub(vscode.window, 'showQuickPick');
 
@@ -1043,7 +1050,7 @@ describe('userInputUtil', () => {
 
         it('should handle no instantiated chaincodes in connection', async () => {
             const logSpy: sinon.SinonSpy = mySandBox.spy(VSCodeBlockchainOutputAdapter.instance(), 'log');
-            fabricConnectionStub.getInstantiatedChaincode.returns([]);
+            fabricClientConnectionStub.getInstantiatedChaincode.returns([]);
             await UserInputUtil.showInstantiatedSmartContractsQuickPick('Choose an instantiated smart contract to test', 'channelTwo');
             logSpy.should.have.been.calledWith(LogType.ERROR, 'No instantiated chaincodes within connection');
 
@@ -1094,7 +1101,7 @@ describe('userInputUtil', () => {
                 label: 'my-contract - transaction1',
                 data: { name: 'transaction1', contract: 'my-contract' }
             });
-            fabricConnectionStub.getMetadata.resolves(
+            fabricClientConnectionStub.getMetadata.resolves(
                 {
                     contracts: {
                         'my-contract': {
@@ -1201,7 +1208,7 @@ describe('userInputUtil', () => {
         });
 
         it('should ask for a function name if there is no metadata', async () => {
-            fabricConnectionStub.getMetadata.resolves(null);
+            fabricClientConnectionStub.getMetadata.resolves(null);
             mySandBox.stub(vscode.window, 'showInputBox').resolves('suchFunc');
             const result: IBlockchainQuickPickItem<{ name: string, contract: string }> = await UserInputUtil.showTransactionQuickPick('Choose a transaction', 'mySmartContract', 'myChannel');
             result.should.deep.equal({
@@ -1214,7 +1221,7 @@ describe('userInputUtil', () => {
         });
 
         it('should handle cancelling the function name prompt if there is no metadata', async () => {
-            fabricConnectionStub.getMetadata.resolves(null);
+            fabricClientConnectionStub.getMetadata.resolves(null);
             mySandBox.stub(vscode.window, 'showInputBox').resolves();
             const result: IBlockchainQuickPickItem<{ name: string, contract: string }> = await UserInputUtil.showTransactionQuickPick('Choose a transaction', 'mySmartContract', 'myChannel');
             should.equal(result, undefined);

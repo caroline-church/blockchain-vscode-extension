@@ -1,0 +1,53 @@
+#!/bin/bash
+#
+# Copyright IBM Corp All Rights Reserved
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Exit on first error, print all commands.
+set -ex
+
+# don't rewrite paths for Windows Git Bash users
+export MSYS_NO_PATHCONV=1
+export COMPOSE_PROJECT_NAME=fabricvscodelocalfabric
+
+docker-compose -f docker-compose.yaml up -d
+
+# wait for Hyperledger Fabric to start
+# incase of errors when running later commands, issue export FABRIC_START_TIMEOUT=<larger number>
+export FABRIC_START_TIMEOUT=30
+for i in $(seq 1 ${FABRIC_START_TIMEOUT})
+do
+    <%_ orgs.forEach((org) => { _%>
+    # This command only works if the peer is up and running
+    if docker exec -e "CORE_PEER_LOCALMSPID=<%=org.mspid%>" -e "CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/fabric/msp/users/Admin@<%=org.domain%>/msp" ${COMPOSE_PROJECT_NAME}_peer0.<%=org.domain%> peer channel list > /dev/null 2>&1
+    then
+        # Peer now available
+        break
+    else
+        # Sleep and try again
+        sleep 1
+    fi
+    <%_ }) _%>
+done
+echo Hyperledger Fabric started in $i seconds
+
+<%_ channels.forEach((channel) => { _%>
+    <%_ let orgDetails = orgs.find((org) => channel.orgs[0] === org.name); _%>
+# Check to see if the channel already exists
+if ! docker exec -e "CORE_PEER_LOCALMSPID=<%=orgDetails.mspid%>" -e "CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/fabric/msp/users/Admin@<%=orgDetails.domain%>/msp" ${COMPOSE_PROJECT_NAME}_peer0.<%=orgDetails.domain%> peer channel getinfo -c <%=channel.name%>
+then
+    # Create the channel
+    docker exec -e "CORE_PEER_LOCALMSPID=<%=orgDetails.mspid%>" -e "CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/fabric/msp/users/Admin@<%=orgDetails.domain%>/msp" ${COMPOSE_PROJECT_NAME}_peer0.<%=orgDetails.domain%> peer channel create -o orderer.example.com:7050 -c <%=channel.name%> -f /etc/hyperledger/configtx/<%=channel.name%>.tx --tls true --cafile /etc/hyperledger/fabric/orderer/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem
+
+    <%_ channel.orgs.forEach((org) => { _%>
+        <%_ let orgDetails = orgs.find((_org) => org === _org.name); _%>
+    
+    # fetch the channel
+    docker exec -e "CORE_PEER_LOCALMSPID=<%=orgDetails.mspid%>" -e "CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/fabric/msp/users/Admin@<%=orgDetails.domain%>/msp" ${COMPOSE_PROJECT_NAME}_peer0.<%=orgDetails.domain%> peer channel fetch 0 <%=channel.name%>.block -o orderer.example.com:7050 -c <%=channel.name%> --tls --cafile /etc/hyperledger/fabric/orderer/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem
+    
+    # Join peer0.<%=orgDetails.domain%> to the channel.
+    docker exec -e "CORE_PEER_LOCALMSPID=<%=orgDetails.mspid%>" -e "CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/fabric/msp/users/Admin@<%=orgDetails.domain%>/msp" ${COMPOSE_PROJECT_NAME}_peer0.<%=orgDetails.domain%> peer channel join -b <%=channel.name%>.block
+    <%_ }) _%>
+fi
+<%_ }) _%>

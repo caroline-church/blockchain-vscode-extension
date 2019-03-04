@@ -71,7 +71,7 @@ describe('createNewIdentityCommand', () => {
 
         mockFabricRuntimeConnection = sinon.createStubInstance(FabricRuntimeConnection);
         mockFabricRuntimeConnection.connect.resolves();
-        mockFabricRuntimeConnection.getCertificateAuthorityName.returns('ca.name');
+        mockFabricRuntimeConnection.getCertificateAuthorityNames.returns(['ca.name']);
         mockFabricRuntimeConnection.getOrderers.resolves([]);
         mockFabricRuntimeConnection.getAllPeerNames.returns([]);
         mockFabricRuntimeConnection.register.resolves('its a secret');
@@ -79,7 +79,6 @@ describe('createNewIdentityCommand', () => {
             certificate: 'this is a certificate',
             privateKey: 'this is a private Key'
         });
-        mockFabricRuntimeConnection.disconnect.resolves();
         mySandBox.stub(FabricConnectionFactory, 'createFabricRuntimeConnection').returns(mockFabricRuntimeConnection);
         mySandBox.stub(runtimeManager, 'getConnection').resolves((mockFabricRuntimeConnection as any));
 
@@ -111,7 +110,6 @@ describe('createNewIdentityCommand', () => {
         mockFabricRuntimeConnection.register.should.have.been.calledOnce;
         mockFabricRuntimeConnection.enroll.should.have.been.calledOnce;
         importIdentityStub.should.have.been.calledOnce;
-        mockFabricRuntimeConnection.disconnect.should.have.been.calledOnce;
 
         executeCommandStub.getCall(3).should.have.been.calledWith(ExtensionCommands.REFRESH_GATEWAYS);
 
@@ -132,7 +130,6 @@ describe('createNewIdentityCommand', () => {
         mockFabricRuntimeConnection.register.should.have.been.calledOnce;
         mockFabricRuntimeConnection.enroll.should.have.been.calledOnce;
         importIdentityStub.should.have.been.calledOnce;
-        mockFabricRuntimeConnection.disconnect.should.have.been.calledOnce;
 
         executeCommandStub.getCall(3).should.have.been.calledWith(ExtensionCommands.REFRESH_GATEWAYS);
 
@@ -158,7 +155,6 @@ describe('createNewIdentityCommand', () => {
         mockFabricRuntimeConnection.register.should.have.been.calledTwice;
         mockFabricRuntimeConnection.enroll.should.have.been.calledTwice;
         importIdentityStub.should.have.been.calledTwice;
-        mockFabricRuntimeConnection.disconnect.should.have.been.calledTwice;
 
         executeCommandStub.getCall(3).should.have.been.calledWith(ExtensionCommands.REFRESH_GATEWAYS);
         executeCommandStub.getCall(5).should.have.been.calledWith(ExtensionCommands.REFRESH_GATEWAYS);
@@ -185,7 +181,6 @@ describe('createNewIdentityCommand', () => {
         mockFabricRuntimeConnection.register.should.have.been.calledOnce;
         mockFabricRuntimeConnection.enroll.should.have.been.calledOnce;
         importIdentityStub.should.have.been.calledOnce;
-        mockFabricRuntimeConnection.disconnect.should.have.been.calledOnce;
 
         executeCommandStub.getCall(3).should.have.been.calledWith(ExtensionCommands.START_FABRIC);
         executeCommandStub.getCall(4).should.have.been.calledWith(ExtensionCommands.REFRESH_GATEWAYS);

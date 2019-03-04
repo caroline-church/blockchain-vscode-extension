@@ -14,7 +14,7 @@
 'use strict';
 import * as vscode from 'vscode';
 import { UserInputUtil, IBlockchainQuickPickItem } from './UserInputUtil';
-import { IFabricConnection } from '../fabric/IFabricConnection';
+import { IFabricClientConnection } from '../fabric/IFabricClientConnection';
 import { FabricConnectionFactory } from '../fabric/FabricConnectionFactory';
 import { FabricConnectionManager } from '../fabric/FabricConnectionManager';
 import { FabricGatewayRegistryEntry } from '../fabric/FabricGatewayRegistryEntry';
@@ -45,7 +45,7 @@ export async function connect(gatewayRegistryEntry: FabricGatewayRegistryEntry, 
         gatewayRegistryEntry = chosenEntry.data;
     }
 
-    let connection: IFabricConnection;
+    let connection: IFabricClientConnection;
     if (gatewayRegistryEntry.managedRuntime) {
 
         const runtimeManager: FabricRuntimeManager = FabricRuntimeManager.instance();

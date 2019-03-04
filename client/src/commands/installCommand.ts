@@ -17,7 +17,7 @@ import { IBlockchainQuickPickItem, UserInputUtil } from './UserInputUtil';
 import { PeerTreeItem } from '../explorer/runtimeOps/PeerTreeItem';
 import { BlockchainTreeItem } from '../explorer/model/BlockchainTreeItem';
 import { PackageRegistryEntry } from '../packages/PackageRegistryEntry';
-import { IFabricConnection } from '../fabric/IFabricConnection';
+import { IFabricRuntimeConnection } from '../fabric/IFabricRuntimeConnection';
 import { VSCodeBlockchainOutputAdapter } from '../logging/VSCodeBlockchainOutputAdapter';
 import { LogType } from '../logging/OutputAdapter';
 import { FabricRuntimeManager } from '../fabric/FabricRuntimeManager';
@@ -70,7 +70,7 @@ export async function installSmartContract(treeItem?: BlockchainTreeItem, peerNa
 
         }
 
-        const connection: IFabricConnection = await FabricRuntimeManager.instance().getConnection();
+        const connection: IFabricRuntimeConnection = await FabricRuntimeManager.instance().getConnection();
 
         const promises: Promise<string | void>[] = [];
         for (const peer of peerNames) {

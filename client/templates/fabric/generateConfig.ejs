@@ -1,0 +1,103 @@
+function generateCerts() {
+  which cryptogen
+  if [ "$?" -ne 0 ]; then
+    echo "cryptogen tool not found. exiting"
+    exit 1
+  fi
+  echo
+  echo "##########################################################"
+  echo "##### Generate certificates using cryptogen tool #########"
+  echo "##########################################################"
+
+  if [ -d "crypto-config" ]; then
+    rm -Rf crypto-config
+  fi
+  set -x
+  cryptogen generate --config=./crypto-config.yaml
+  res=$?
+  set +x
+  if [ $res -ne 0 ]; then
+    echo "Failed to generate certificates..."
+    exit 1
+  fi
+  echo
+}
+
+# Update the name of the key file
+function renamePrivateKey() {
+  CURRENT_DIR=$PWD
+<%_ orgs.forEach((org, index) => { _%>
+  cd crypto-config/peerOrganizations/<%=org.domain%>/ca/
+  mv *_sk key.pem
+  cd "$CURRENT_DIR"
+  cd crypto-config/peerOrganizations/<%=org.domain%>/users/Admin@<%=org.domain%>/msp/keystore
+  mv *_sk key.pem
+  cd "$CURRENT_DIR"
+<%_ }) _%>
+}
+
+function generateChannelArtifacts() {
+  which configtxgen
+  if [ "$?" -ne 0 ]; then
+    echo "configtxgen tool not found. exiting"
+    exit 1
+  fi
+
+  echo "##########################################################"
+  echo "#########  Generating Orderer Genesis block ##############"
+  echo "##########################################################"
+  # Note: For some unknown reason (at least for now) the block file can't be
+  # named orderer.genesis.block or the orderer will fail to launch!
+  configtxgen -profile OrdererGenesis -channelID byfn-sys-channel -outputBlock ./config/genesis.block
+  res=$?
+  set +x
+  if [ $res -ne 0 ]; then
+    echo "Failed to generate orderer genesis block..."
+    exit 1
+  fi
+  echo
+  echo "#################################################################"
+  echo "### Generating channel configuration transaction 'channel.tx' ###"
+  echo "#################################################################"
+  set -x
+
+<%_ channels.forEach((channel) => { _%>
+  configtxgen -profile <%=channel.name%> -outputCreateChannelTx ./config/<%=channel.name%>.tx -channelID <%=channel.name%>
+  res=$?
+  set +x
+  if [ $res -ne 0 ]; then
+    echo "Failed to generate channel configuration transaction..."
+    exit 1
+  fi
+<%_ }) _%>
+
+<%_ channels.forEach((channel) => { _%>
+  echo
+  echo "#################################################################"
+  echo "#######    Generating channel <%=channel.name%>             ##########"
+  echo "#################################################################"
+  <%_ channel.orgs.forEach((org) => { _%>
+    <%_ const orgDetails = orgs.find((_org) => _org.name === org); _%>
+  echo
+  echo "#################################################################"
+  echo "#######    Generating anchor peer update for <%=orgDetails.mspid%>  ##########"
+  echo "#################################################################"
+  set -x
+
+  configtxgen -profile <%=channel.name%> -outputAnchorPeersUpdate ./config/<%=orgDetails.mspid%>anchors.tx -channelID <%=channel.name%> -asOrg <%=orgDetails.mspid%>
+  res=$?
+  set +x
+  if [ $res -ne 0 ]; then
+    echo "Failed to generate anchor peer update for <%=orgDetails.mspid%>..."
+    exit 1
+  fi
+  <%_ }) _%>
+<%_ }) _%>
+}
+
+export PATH=${PWD}/../bin:${PWD}:$PATH
+echo $PATH
+mkdir config
+generateCerts
+renamePrivateKey
+generateChannelArtifacts

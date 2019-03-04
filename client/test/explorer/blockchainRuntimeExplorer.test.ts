@@ -18,7 +18,7 @@ import * as chai from 'chai';
 import * as sinon from 'sinon';
 import * as sinonChai from 'sinon-chai';
 
-import { FabricConnection } from '../../src/fabric/FabricConnection';
+import { FabricRuntimeConnection } from '../../src/fabric/FabricRuntimeConnection';
 import { BlockchainTreeItem } from '../../src/explorer/model/BlockchainTreeItem';
 import { BlockchainRuntimeExplorerProvider } from '../../src/explorer/BlockchainRuntimeExplorer';
 import { ChannelTreeItem } from '../../src/explorer/model/ChannelTreeItem';
@@ -45,17 +45,6 @@ import { OrdererTreeItem } from '../../src/explorer/runtimeOps/OrdererTreeItem';
 
 chai.use(sinonChai);
 chai.should();
-
-class TestFabricConnection extends FabricConnection {
-
-    async connect(): Promise<void> {
-        return;
-    }
-
-    async getConnectionDetails(): Promise<any> {
-        return;
-    }
-}
 
 // tslint:disable no-unused-expression
 describe('BlockchainRuntimeExplorer', () => {
@@ -130,8 +119,8 @@ describe('BlockchainRuntimeExplorer', () => {
 
             it('should error if gRPC cant connect to Fabric', async () => {
                 isRunningStub.resolves(true);
-                const fabricConnection: sinon.SinonStubbedInstance<FabricConnection> = sinon.createStubInstance(TestFabricConnection);
-                getConnectionStub.returns((fabricConnection as any) as FabricConnection);
+                const fabricConnection: sinon.SinonStubbedInstance<FabricRuntimeConnection> = sinon.createStubInstance(FabricRuntimeConnection);
+                getConnectionStub.returns((fabricConnection as any) as FabricRuntimeConnection);
                 fabricConnection.getAllPeerNames.returns(['peerOne']);
                 fabricConnection.getAllChannelsForPeer.throws({ message: 'Received http2 header with status: 503' });
 
@@ -145,8 +134,8 @@ describe('BlockchainRuntimeExplorer', () => {
 
             it('should error if getAllChannelsForPeer errors with message when populating channels view', async () => {
                 isRunningStub.resolves(true);
-                const fabricConnection: sinon.SinonStubbedInstance<FabricConnection> = sinon.createStubInstance(TestFabricConnection);
-                getConnectionStub.returns((fabricConnection as any) as FabricConnection);
+                const fabricConnection: sinon.SinonStubbedInstance<FabricRuntimeConnection> = sinon.createStubInstance(FabricRuntimeConnection);
+                getConnectionStub.returns((fabricConnection as any) as FabricRuntimeConnection);
                 fabricConnection.getAllPeerNames.returns(['peerOne']);
                 fabricConnection.getAllChannelsForPeer.throws({ message: 'some error' });
 
@@ -159,8 +148,8 @@ describe('BlockchainRuntimeExplorer', () => {
 
             it('should error if getAllChannelsForPeer errors without a message when populating organizations view', async () => {
                 isRunningStub.resolves(true);
-                const fabricConnection: sinon.SinonStubbedInstance<FabricConnection> = sinon.createStubInstance(TestFabricConnection);
-                getConnectionStub.returns((fabricConnection as any) as FabricConnection);
+                const fabricConnection: sinon.SinonStubbedInstance<FabricRuntimeConnection> = sinon.createStubInstance(FabricRuntimeConnection);
+                getConnectionStub.returns((fabricConnection as any) as FabricRuntimeConnection);
                 fabricConnection.getAllPeerNames.returns(['peerOne']);
                 fabricConnection.getAllChannelsForPeer.throws('an error with no message');
 
@@ -173,8 +162,8 @@ describe('BlockchainRuntimeExplorer', () => {
 
             it('should error if populating nodes view fails', async () => {
                 isRunningStub.resolves(true);
-                const fabricConnection: sinon.SinonStubbedInstance<FabricConnection> = sinon.createStubInstance(TestFabricConnection);
-                getConnectionStub.returns((fabricConnection as any) as FabricConnection);
+                const fabricConnection: sinon.SinonStubbedInstance<FabricRuntimeConnection> = sinon.createStubInstance(FabricRuntimeConnection);
+                getConnectionStub.returns((fabricConnection as any) as FabricRuntimeConnection);
                 fabricConnection.getAllPeerNames.throws({ message: 'some error' });
 
                 const blockchainRuntimeExplorerProvider: BlockchainRuntimeExplorerProvider = myExtension.getBlockchainRuntimeExplorerProvider();
@@ -190,7 +179,7 @@ describe('BlockchainRuntimeExplorer', () => {
             let mySandBox: sinon.SinonSandbox;
             let allChildren: Array<BlockchainTreeItem>;
             let blockchainRuntimeExplorerProvider: BlockchainRuntimeExplorerProvider;
-            let fabricConnection: sinon.SinonStubbedInstance<FabricConnection>;
+            let fabricConnection: sinon.SinonStubbedInstance<FabricRuntimeConnection>;
             let logSpy: sinon.SinonSpy;
 
             beforeEach(async () => {
@@ -201,7 +190,7 @@ describe('BlockchainRuntimeExplorer', () => {
 
                 await ExtensionUtil.activateExtension();
 
-                fabricConnection = sinon.createStubInstance(TestFabricConnection);
+                fabricConnection = sinon.createStubInstance(FabricRuntimeConnection);
 
                 fabricConnection.getAllPeerNames.returns(['peerOne', 'peerTwo']);
 
@@ -249,7 +238,7 @@ describe('BlockchainRuntimeExplorer', () => {
 
                 blockchainRuntimeExplorerProvider = myExtension.getBlockchainRuntimeExplorerProvider();
                 const fabricRuntimeManager: FabricRuntimeManager = FabricRuntimeManager.instance();
-                const getConnectionStub: sinon.SinonStub = mySandBox.stub(fabricRuntimeManager, 'getConnection').returns((fabricConnection as any) as FabricConnection);
+                const getConnectionStub: sinon.SinonStub = mySandBox.stub(fabricRuntimeManager, 'getConnection').returns((fabricConnection as any) as FabricRuntimeConnection);
                 mySandBox.stub(fabricRuntimeManager.getRuntime(), 'isRunning').resolves(true);
                 allChildren = await blockchainRuntimeExplorerProvider.getChildren();
 
@@ -307,7 +296,7 @@ describe('BlockchainRuntimeExplorer', () => {
             });
 
             it('should show peers (nodes) correctly', async () => {
-                fabricConnection.getCertificateAuthorityName.returns('ca-name');
+                fabricConnection.getCertificateAuthorityNames.returns(['ca-name']);
 
                 allChildren = await blockchainRuntimeExplorerProvider.getChildren();
                 allChildren.length.should.equal(4);

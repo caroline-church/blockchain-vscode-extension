@@ -70,7 +70,7 @@ describe('SubmitTransactionCommand', () => {
 
             fabricClientConnectionMock = sinon.createStubInstance(FabricClientConnection);
             fabricClientConnectionMock.connect.resolves();
-            fabricClientConnectionMock.instantiateChaincode.resolves();
+
             const fabricConnectionManager: FabricConnectionManager = FabricConnectionManager.instance();
             getConnectionStub = mySandBox.stub(fabricConnectionManager, 'getConnection').returns(fabricClientConnectionMock);
 

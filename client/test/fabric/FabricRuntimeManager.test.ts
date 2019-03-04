@@ -205,7 +205,6 @@ describe('FabricRuntimeManager', () => {
             runtime.setState(FabricRuntimeState.STOPPED);
             runtime.emit('busy', false);
 
-            connection.disconnect.should.have.been.called;
             should.not.exist(runtimeManager['connection']);
         });
 
@@ -242,7 +241,6 @@ describe('FabricRuntimeManager', () => {
             runtime.setState(FabricRuntimeState.STOPPED);
             runtime.emit('busy', false);
 
-            connection.disconnect.should.not.have.been.called;
             should.not.exist(runtimeManager['connection']);
         });
 
@@ -278,7 +276,6 @@ describe('FabricRuntimeManager', () => {
             runtime.setState(FabricRuntimeState.STARTED);
             runtime.emit('busy', false);
 
-            connection.disconnect.should.not.have.been.called;
             runtimeManager['connection'].should.exist;
         });
     });

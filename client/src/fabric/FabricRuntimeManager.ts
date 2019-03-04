@@ -12,15 +12,15 @@
  * limitations under the License.
 */
 
-import * as vscode from 'vscode';
 import { FabricRuntime, FabricRuntimeState } from './FabricRuntime';
 import { FabricRuntimePorts } from './FabricRuntimePorts';
-import { IFabricConnection } from './IFabricConnection';
+import { IFabricRuntimeConnection } from './IFabricRuntimeConnection';
 import { FabricConnectionFactory } from './FabricConnectionFactory';
 import { IFabricWallet } from './IFabricWallet';
 import { FabricWalletGeneratorFactory } from './FabricWalletGeneratorFactory';
 import { VSCodeBlockchainDockerOutputAdapter } from '../logging/VSCodeBlockchainDockerOutputAdapter';
 import { IFabricWalletGenerator } from './IFabricWalletGenerator';
+import * as vscode from 'vscode';
 
 export class FabricRuntimeManager {
 
@@ -36,14 +36,14 @@ export class FabricRuntimeManager {
 
     private runtime: FabricRuntime;
 
-    private connection: IFabricConnection;
+    private connection: IFabricRuntimeConnection;
 
-    private connectingPromise: Promise<IFabricConnection>;
+    private connectingPromise: Promise<IFabricRuntimeConnection>;
 
     private constructor() {
     }
 
-    public async getConnection(): Promise<IFabricConnection> {
+    public async getConnection(): Promise<IFabricRuntimeConnection> {
         if (this.connectingPromise) {
             return this.connectingPromise;
         }
@@ -52,7 +52,7 @@ export class FabricRuntimeManager {
             return this.connection;
         }
 
-        this.connectingPromise = this.getConnectionInner().then((connection: IFabricConnection) => {
+        this.connectingPromise = this.getConnectionInner().then((connection: IFabricRuntimeConnection) => {
             this.connectingPromise = undefined;
             return connection;
         });
@@ -189,9 +189,12 @@ export class FabricRuntimeManager {
         return ports;
     }
 
-    private async getConnectionInner(): Promise<IFabricConnection> {
-        const identityName: string = 'Admin@org1.example.com';
-        const mspid: string = 'Org1MSP';
+    private async getConnectionInner(): Promise<IFabricRuntimeConnection> {
+
+        const orgs: {identityName: string, mspid: string}[] = [];
+        orgs.push({identityName: 'Admin@org1.example.com', mspid: 'Org1MSP'});
+        orgs.push({identityName: 'Admin@org2.example.com', mspid: 'Org2MSP'});
+
         const enrollmentID: string = 'admin';
         const enrollmentSecret: string = 'adminpw';
 
@@ -199,39 +202,38 @@ export class FabricRuntimeManager {
         // register for events to disconnect
         runtime.on('busy', () => {
             if (runtime.getState() === FabricRuntimeState.STOPPED) {
-                if (this.connection) {
-                    this.connection.disconnect();
-                }
-
                 this.connection = undefined;
             }
         });
 
-        const connection: IFabricConnection = FabricConnectionFactory.createFabricRuntimeConnection(runtime);
+        const connection: IFabricRuntimeConnection = FabricConnectionFactory.createFabricRuntimeConnection(runtime);
         const fabricWalletGenerator: IFabricWalletGenerator = FabricWalletGeneratorFactory.createFabricWalletGenerator();
 
+        await connection.initialize();
         // our secret wallet
         const runtimeWallet: IFabricWallet = await fabricWalletGenerator.createLocalWallet(runtime.getName() + '-ops');
 
-        const adminExists: boolean = await runtimeWallet.exists(identityName);
+        for (const org of orgs) {
+            const adminExists: boolean = await runtimeWallet.exists(org.identityName);
 
-        if (!adminExists) {
-            const certificate: string = await runtime.getCertificate();
-            const privateKey: string = await runtime.getPrivateKey();
-            await runtimeWallet.importIdentity(certificate, privateKey, identityName, mspid);
-        }
+            if (!adminExists) {
+                const certificate: string = await runtime.getCertificate(org.mspid);
+                const privateKey: string = await runtime.getPrivateKey(org.mspid);
+                await runtimeWallet.importIdentity(certificate, privateKey, org.identityName, org.mspid);
+            }
 
-        await connection.connect(runtimeWallet, identityName);
+            await connection.connect(runtimeWallet, org.identityName);
 
-        // enroll a user
-        const gatewayWallet: IFabricWallet = await fabricWalletGenerator.createLocalWallet(runtime.getName());
-        this.gatewayWallet = gatewayWallet;
+            // enroll a user
+            const gatewayWallet: IFabricWallet = await fabricWalletGenerator.createLocalWallet(runtime.getName());
+            this.gatewayWallet = gatewayWallet;
 
-        const otherAdminExists: boolean = await gatewayWallet.exists(identityName);
+            const otherAdminExists: boolean = await gatewayWallet.exists(org.identityName);
 
-        if (!otherAdminExists) {
-            const enrollment: { certificate: string, privateKey: string } = await connection.enroll(enrollmentID, enrollmentSecret);
-            await gatewayWallet.importIdentity(enrollment.certificate, enrollment.privateKey, identityName, mspid);
+            if (!otherAdminExists) {
+                const enrollment: { certificate: string, privateKey: string } = await connection.enroll(enrollmentID, enrollmentSecret, org.mspid);
+                await gatewayWallet.importIdentity(enrollment.certificate, enrollment.privateKey, org.identityName, org.mspid);
+            }
         }
 
         const outputAdapter: VSCodeBlockchainDockerOutputAdapter = VSCodeBlockchainDockerOutputAdapter.instance();

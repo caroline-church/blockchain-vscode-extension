@@ -24,15 +24,32 @@ import { Docker, ContainerPorts } from '../docker/Docker';
 import { UserInputUtil } from '../commands/UserInputUtil';
 import { LogType } from '../logging/OutputAdapter';
 import * as request from 'request';
+import { FabricOrgCertificates } from './FabricOrgCertificates';
 
-const basicNetworkPath: string = path.resolve(__dirname, '..', '..', '..', 'basic-network');
-const basicNetworkConnectionProfilePath: string = path.resolve(basicNetworkPath, 'connection.json');
-const basicNetworkConnectionProfile: string = JSON.parse(fs.readFileSync(basicNetworkConnectionProfilePath).toString());
-const basicNetworkAdminPath: string = path.resolve(basicNetworkPath, 'crypto-config/peerOrganizations/org1.example.com/users/Admin@org1.example.com');
-const basicNetworkAdminCertificatePath: string = path.resolve(basicNetworkAdminPath, 'msp/signcerts/Admin@org1.example.com-cert.pem');
-const basicNetworkAdminCertificate: string = fs.readFileSync(basicNetworkAdminCertificatePath, 'utf8');
-const basicNetworkAdminPrivateKeyPath: string = path.resolve(basicNetworkAdminPath, 'msp/keystore/cd96d5260ad4757551ed4a5a991e62130f8008a0bf996e4e4b84cd097a747fec_sk');
-const basicNetworkAdminPrivateKey: string = fs.readFileSync(basicNetworkAdminPrivateKeyPath, 'utf8');
+const basicNetworkPath: string = path.resolve(__dirname, '..', '..', '..', 'scripts', 'stuff');
+// const basicNetworkConnectionProfilePath: string = path.resolve(basicNetworkPath, 'connection.json');
+// const basicNetworkConnectionProfile: string = JSON.parse(fs.readFileSync(basicNetworkConnectionProfilePath).toString());
+const basicNetworkOrg1AdminPath: string = path.resolve(basicNetworkPath, 'crypto-config/peerOrganizations/org1.example.com/users/Admin@org1.example.com');
+const basicNetworkOrg2AdminPath: string = path.resolve(basicNetworkPath, 'crypto-config/peerOrganizations/org2.example.com/users/Admin@org2.example.com');
+
+const basicNetworkOrdererTLSCertificatePath: string = path.resolve(basicNetworkPath, 'crypto-config/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem');
+const basicNetworkOrdererTLSCertificate: string = fs.readFileSync(basicNetworkOrdererTLSCertificatePath, 'utf8');
+
+const org1Certs: FabricOrgCertificates = new FabricOrgCertificates();
+org1Certs.peerAdminCert = fs.readFileSync(path.resolve(basicNetworkOrg1AdminPath, 'msp/signcerts/Admin@org1.example.com-cert.pem'), 'utf8');
+org1Certs.peerAdminKey = fs.readFileSync(path.resolve(basicNetworkOrg1AdminPath, 'msp/keystore/key.pem'), 'utf8');
+org1Certs.caTLSCert = fs.readFileSync(path.resolve(basicNetworkPath, 'crypto-config/peerOrganizations/org1.example.com/tlsca/tlsca.org1.example.com-cert.pem'), 'utf8');
+org1Certs.peerTLSCert = fs.readFileSync(path.resolve(basicNetworkPath, 'crypto-config/peerOrganizations/org1.example.com/tlsca/tlsca.org1.example.com-cert.pem'), 'utf8');
+
+const org2Certs: FabricOrgCertificates = new FabricOrgCertificates();
+org2Certs.peerAdminCert = fs.readFileSync(path.resolve(basicNetworkOrg2AdminPath, 'msp/signcerts/Admin@org2.example.com-cert.pem'), 'utf8');
+org2Certs.peerAdminKey = fs.readFileSync(path.resolve(basicNetworkOrg2AdminPath, 'msp/keystore/key.pem'), 'utf8');
+org2Certs.caTLSCert = fs.readFileSync(path.resolve(basicNetworkPath, 'crypto-config/peerOrganizations/org2.example.com/tlsca/tlsca.org2.example.com-cert.pem'), 'utf8');
+org2Certs.peerTLSCert = fs.readFileSync(path.resolve(basicNetworkPath, 'crypto-config/peerOrganizations/org2.example.com/tlsca/tlsca.org2.example.com-cert.pem'), 'utf8');
+
+const certMap: Map<string, FabricOrgCertificates> = new Map<string, FabricOrgCertificates>();
+certMap.set('Org1MSP', org1Certs);
+certMap.set('Org2MSP', org2Certs);
 
 export enum FabricRuntimeState {
     STARTING = 'starting',
@@ -139,24 +156,25 @@ export class FabricRuntime extends EventEmitter {
     }
 
     public async getConnectionProfile(): Promise<object> {
-        const containerPrefix: string = this.docker.getContainerPrefix();
-        const connectionProfile: any = basicNetworkConnectionProfile;
-        const peerPorts: ContainerPorts = await this.docker.getContainerPorts(`${containerPrefix}_peer0.org1.example.com`);
-        const peerRequestHost: string = Docker.fixHost(peerPorts['7051/tcp'][0].HostIp);
-        const peerRequestPort: string = peerPorts['7051/tcp'][0].HostPort;
-        const peerEventHost: string = Docker.fixHost(peerPorts['7053/tcp'][0].HostIp);
-        const peerEventPort: string = peerPorts['7053/tcp'][0].HostPort;
-        const ordererPorts: ContainerPorts = await this.docker.getContainerPorts(`${containerPrefix}_orderer.example.com`);
-        const ordererHost: string = Docker.fixHost(ordererPorts['7050/tcp'][0].HostIp);
-        const ordererPort: string = ordererPorts['7050/tcp'][0].HostPort;
-        const caPorts: ContainerPorts = await this.docker.getContainerPorts(`${containerPrefix}_ca.example.com`);
-        const caHost: string = Docker.fixHost(caPorts['7054/tcp'][0].HostIp);
-        const caPort: string = caPorts['7054/tcp'][0].HostPort;
-        connectionProfile.peers['peer0.org1.example.com'].url = `grpc://${peerRequestHost}:${peerRequestPort}`;
-        connectionProfile.peers['peer0.org1.example.com'].eventUrl = `grpc://${peerEventHost}:${peerEventPort}`;
-        connectionProfile.orderers['orderer.example.com'].url = `grpc://${ordererHost}:${ordererPort}`;
-        connectionProfile.certificateAuthorities['ca.org1.example.com'].url = `http://${caHost}:${caPort}`;
-        return connectionProfile;
+    //     const containerPrefix: string = this.docker.getContainerPrefix();
+    //     const connectionProfile: any = basicNetworkConnectionProfile;
+    //     const peerPorts: ContainerPorts = await this.docker.getContainerPorts(`${containerPrefix}_peer0.org1.example.com`);
+    //     const peerRequestHost: string = Docker.fixHost(peerPorts['7051/tcp'][0].HostIp);
+    //     const peerRequestPort: string = peerPorts['7051/tcp'][0].HostPort;
+    //     const peerEventHost: string = Docker.fixHost(peerPorts['7053/tcp'][0].HostIp);
+    //     const peerEventPort: string = peerPorts['7053/tcp'][0].HostPort;
+    //     const ordererPorts: ContainerPorts = await this.docker.getContainerPorts(`${containerPrefix}_orderer.example.com`);
+    //     const ordererHost: string = Docker.fixHost(ordererPorts['7050/tcp'][0].HostIp);
+    //     const ordererPort: string = ordererPorts['7050/tcp'][0].HostPort;
+    //     const caPorts: ContainerPorts = await this.docker.getContainerPorts(`${containerPrefix}_ca.org1.example.com`);
+    //     const caHost: string = Docker.fixHost(caPorts['7054/tcp'][0].HostIp);
+    //     const caPort: string = caPorts['7054/tcp'][0].HostPort;
+    //     connectionProfile.peers['peer0.org1.example.com'].url = `grpcs://${peerRequestHost}:${peerRequestPort}`;
+    //     connectionProfile.peers['peer0.org1.example.com'].eventUrl = `grpcs://${peerEventHost}:${peerEventPort}`;
+    //     connectionProfile.orderers['orderer.example.com'].url = `grpcs://${ordererHost}:${ordererPort}`;
+    //     connectionProfile.certificateAuthorities['ca.org1.example.com'].url = `https://${caHost}:${caPort}`;
+    //     return connectionProfile;
+        return {};
     }
 
     public async getConnectionProfilePath(): Promise<string> {
@@ -167,16 +185,24 @@ export class FabricRuntime extends EventEmitter {
         return path.join(dir, 'connection.json');
     }
 
-    public async getCertificate(): Promise<string> {
-        return basicNetworkAdminCertificate;
+    public async getCertificate(org: string): Promise<string> {
+        return certMap.get(org).peerAdminCert;
     }
 
-    public getCertificatePath(): string {
-        return basicNetworkAdminCertificatePath;
+    public async getPrivateKey(org: string): Promise<string> {
+        return certMap.get(org).peerAdminKey;
     }
 
-    public async getPrivateKey(): Promise<string> {
-        return basicNetworkAdminPrivateKey;
+    public getOrdererTLSCertificate(): string {
+        return basicNetworkOrdererTLSCertificate;
+    }
+
+    public getCACertificate(org: string): string {
+        return certMap.get(org).caTLSCert;
+    }
+
+    public getPeerTLSCertificate(org: string): string {
+        return certMap.get(org).peerTLSCert;
     }
 
     public async isCreated(): Promise<boolean> {
@@ -184,8 +210,8 @@ export class FabricRuntime extends EventEmitter {
         const created: boolean[] = await Promise.all([
             this.docker.doesVolumeExist(`${containerPrefix}_peer0.org1.example.com`),
             this.docker.doesVolumeExist(`${containerPrefix}_orderer.example.com`),
-            this.docker.doesVolumeExist(`${containerPrefix}_ca.example.com`),
-            this.docker.doesVolumeExist(`${containerPrefix}_couchdb`),
+            this.docker.doesVolumeExist(`${containerPrefix}_ca.org1.example.com`),
+            this.docker.doesVolumeExist(`${containerPrefix}_couchdb0`),
             this.docker.doesVolumeExist(`${containerPrefix}_logs`)
         ]);
         return created.some((value: boolean) => value === true);
@@ -196,8 +222,8 @@ export class FabricRuntime extends EventEmitter {
         const running: boolean[] = await Promise.all([
             this.docker.isContainerRunning(`${containerPrefix}_peer0.org1.example.com`),
             this.docker.isContainerRunning(`${containerPrefix}_orderer.example.com`),
-            this.docker.isContainerRunning(`${containerPrefix}_ca.example.com`),
-            this.docker.isContainerRunning(`${containerPrefix}_couchdb`),
+            this.docker.isContainerRunning(`${containerPrefix}_ca.org1.example.com`),
+            this.docker.isContainerRunning(`${containerPrefix}_couchdb0`),
             this.docker.isContainerRunning((`${containerPrefix}_logs`))
         ]);
         return !running.some((value: boolean) => value === false);
@@ -239,33 +265,33 @@ export class FabricRuntime extends EventEmitter {
             outputAdapter = ConsoleOutputAdapter.instance();
         }
 
-        const connectionProfileObj: any = await this.getConnectionProfile();
-        const connectionProfile: string = JSON.stringify(connectionProfileObj, null, 4);
-        let newWalletPath: string;
+        // const connectionProfileObj: any = await this.getConnectionProfile();
+        // const connectionProfile: string = JSON.stringify(connectionProfileObj, null, 4);
+        // let newWalletPath: string;
 
-        const extDir: string = vscode.workspace.getConfiguration().get('blockchain.ext.directory');
-        const homeExtDir: string = await UserInputUtil.getDirPath(extDir);
-        const runtimeWalletPath: string = path.join(homeExtDir, this.name, 'wallet');
+        // const extDir: string = vscode.workspace.getConfiguration().get('blockchain.ext.directory');
+        // const homeExtDir: string = await UserInputUtil.getDirPath(extDir);
+        // const runtimeWalletPath: string = path.join(homeExtDir, this.name, 'wallet');
 
-        if (!dir) {
-            dir = path.join(homeExtDir, this.name);
-        } else {
-            dir = path.join(dir, this.name);
-            newWalletPath = path.join(dir, 'wallet');
-        }
+        // if (!dir) {
+        //     dir = path.join(homeExtDir, this.name);
+        // } else {
+        //     dir = path.join(dir, this.name);
+        //     newWalletPath = path.join(dir, 'wallet');
+        // }
 
-        const connectionProfilePath: string = path.join(dir, 'connection.json');
+        // const connectionProfilePath: string = path.join(dir, 'connection.json');
 
-        try {
-            await fs.ensureFileSync(connectionProfilePath);
-            await fs.writeFileSync(connectionProfilePath, connectionProfile);
-            if (newWalletPath) {
-                await fs.copySync(runtimeWalletPath, newWalletPath);
-            }
-        } catch (error) {
-            outputAdapter.log(LogType.ERROR, `Issue saving runtime connection details in directory ${dir} with error: ${error.message}`);
-            throw new Error(error);
-        }
+        // try {
+        //     await fs.ensureFileSync(connectionProfilePath);
+        //     await fs.writeFileSync(connectionProfilePath, connectionProfile);
+        //     if (newWalletPath) {
+        //         await fs.copySync(runtimeWalletPath, newWalletPath);
+        //     }
+        // } catch (error) {
+        //     outputAdapter.log(LogType.ERROR, `Issue saving runtime connection details in directory ${dir} with error: ${error.message}`);
+        //     throw new Error(error);
+        // }
     }
 
     public async deleteConnectionDetails(outputAdapter: OutputAdapter): Promise<void> {
