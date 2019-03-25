@@ -88,10 +88,44 @@ export abstract class FabricConnection {
     public async getInstantiatedChaincode(channelName: string): Promise<Array<{ name: string, version: string }>> {
         const instantiatedChaincodes: Array<any> = [];
         const channel: Client.Channel = await this.getChannel(channelName);
+
+        // query on old life cycle
         const chainCodeResponse: Client.ChaincodeQueryResponse = await channel.queryInstantiatedChaincodes(null);
         chainCodeResponse.chaincodes.forEach((chainCode: Client.ChaincodeInfo) => {
             instantiatedChaincodes.push({ name: chainCode.name, version: chainCode.version });
         });
+
+        // query new life cycle
+        try {
+            const channelPeers: Array<Client.ChannelPeer> = channel.getPeers();
+
+            const peer: Client.Peer = channelPeers[0].getPeer();
+            const nameSpaceDefRequest: Client.QueryNamespaceDefinitionsRequest = {
+                target: peer,
+                txId: this.gateway.getClient().newTransactionID()
+            };
+
+            const result: any = await channel.queryNamespaceDefinitions(nameSpaceDefRequest);
+
+            const chaincodeNames: Array<string> = Object.keys(result.namespaces);
+
+            for (const name of chaincodeNames) {
+
+                const chaincodeQueryDefRequest: Client.QueryChaincodeDefinitionRequest = {
+                    target: peer,
+                    chaincodeId: name,
+                    txId: this.gateway.getClient().newTransactionID()
+                };
+
+                const chaincode: Client.Chaincode = await channel.queryChaincodeDefinition(chaincodeQueryDefRequest);
+                instantiatedChaincodes.push({ name: name, version: chaincode.getVersion() });
+            }
+        } catch (error) {
+            // don't care about errors if they are not using new lifecycle
+            if (!error.message.startsWith('cannot use new lifecycle for channel')) {
+                throw error;
+            }
+        }
 
         return instantiatedChaincodes;
     }

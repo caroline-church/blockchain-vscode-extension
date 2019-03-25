@@ -17,7 +17,7 @@ networks:
 services:
   orderer.example.com:
     container_name: yofn_orderer.example.com
-    image: hyperledger/fabric-orderer:1.4.0
+    image: hyperledger/fabric-orderer:2.0.0-alpha
     environment:
       - ORDERER_GENERAL_LOGLEVEL=info
       - ORDERER_GENERAL_LISTENADDRESS=0.0.0.0
@@ -39,7 +39,7 @@ services:
       - basic
   peer0.org1.example.com:
     container_name: yofn_peer0.org1.example.com
-    image: hyperledger/fabric-peer:1.4.0
+    image: hyperledger/fabric-peer:2.0.0-alpha
     environment:
       - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
       - CORE_PEER_ID=peer0.org1.example.com
@@ -79,7 +79,7 @@ services:
     networks:
       - basic
   ca.org1.example.com:
-    image: hyperledger/fabric-ca:1.4.0
+    image: hyperledger/fabric-ca:2.0.0-alpha
     environment:
       - FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server
       - FABRIC_CA_SERVER_CA_NAME=ca.org1.example.com

@@ -29,10 +29,10 @@ export class FabricConnectionFactory {
 
     public static createFabricEnvironmentConnection(environment: FabricEnvironment, outputAdapter?: OutputAdapter): IFabricEnvironmentConnection {
         if (!this.environmentConnection) {
-            this.environmentConnection = require('./FabricEnvironmentConnection');
+            this.environmentConnection = require('./Fabric2RuntimeConnection');
         }
 
-        return new (this.environmentConnection).FabricEnvironmentConnection(environment, outputAdapter);
+        return new (this.environmentConnection).Fabric2RuntimeConnection(environment, outputAdapter);
     }
 
     private static environmentConnection: any;

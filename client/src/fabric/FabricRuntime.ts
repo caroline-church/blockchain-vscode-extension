@@ -83,7 +83,8 @@ export class FabricRuntime extends FabricEnvironment {
             peerChaincode: this.ports.peerChaincode,
             certificateAuthority: this.ports.certificateAuthority,
             couchDB: this.ports.couchDB,
-            logspout: this.ports.logs
+            logspout: this.ports.logs,
+            version: '2.0.0-alpha'
         });
 
     }

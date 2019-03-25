@@ -28,7 +28,7 @@ import { SettingConfigurations } from '../../SettingConfigurations';
  * Main function which calls the methods and refreshes the blockchain explorer box each time that it runs successfully.
  * This will be used in other files to call the command to package a smart contract project.
  */
-export async function packageSmartContract(workspace?: vscode.WorkspaceFolder, overrideName?: string, overrideVersion?: string): Promise<PackageRegistryEntry> {
+export async function packageSmartContract(tar: boolean = false, workspace?: vscode.WorkspaceFolder, overrideName?: string, overrideVersion?: string): Promise<PackageRegistryEntry> {
     const outputAdapter: VSCodeBlockchainOutputAdapter = VSCodeBlockchainOutputAdapter.instance();
     outputAdapter.log(LogType.INFO, undefined, 'packageSmartContract');
 
@@ -100,7 +100,11 @@ export async function packageSmartContract(workspace?: vscode.WorkspaceFolder, o
         try {
 
             // Determine the filename of the new package.
-            const pkgFile: string = path.join(resolvedPkgDir, `${properties.workspacePackageName}@${properties.workspacePackageVersion}.cds`);
+            let fileExtension: string = 'cds';
+            if (tar) {
+                fileExtension = 'tar';
+            }
+            const pkgFile: string = path.join(resolvedPkgDir, `${properties.workspacePackageName}@${properties.workspacePackageVersion}.${fileExtension}`);
             const pkgFileExists: boolean = await fs.pathExists(pkgFile);
             if (pkgFileExists) {
                 if (language === 'golang') {
@@ -145,27 +149,50 @@ export async function packageSmartContract(workspace?: vscode.WorkspaceFolder, o
 
             // Create the package. Need to dynamically load the package class
             // from the Fabric SDK to avoid early native module loading.
-            const { Package } = await import('fabric-client');
-            const pkg: any = await Package.fromDirectory({
-                name: properties.workspacePackageName,
-                version: properties.workspacePackageVersion,
-                path: contractPath,
-                type: language,
-                metadataPath: metadataPathExists ? metadataPath : null
-            });
-            const pkgBuffer: any = await pkg.toBuffer();
-            await fs.writeFile(pkgFile, pkgBuffer);
+            let pkgBuffer: any;
+            let pkg: any;
+            if (!tar) {
+                const { Package } = await import('fabric-client');
+                pkg = await Package.fromDirectory({
+                    name: properties.workspacePackageName,
+                    version: properties.workspacePackageVersion,
+                    path: contractPath,
+                    type: language,
+                    metadataPath: metadataPathExists ? metadataPath : null
+                });
 
-            Reporter.instance().sendTelemetryEvent('packageCommand');
+                pkgBuffer = await pkg.toBuffer();
+            } else {
+                const Client: any = require('fabric-client');
+
+                const client: Client = new Client();
+                const tempchaincode: Client.Chaincode = client['newChaincode'](properties.workspacePackageName, properties.workspacePackageVersion);
+
+                const packageRequest: any = {
+                    chaincodeType: language,
+                    chaincodePath: contractPath,
+                    metadataPath: metadataPathExists ? metadataPath : null,
+                    goPath: language === 'golang' ? process.env.goPath : undefined
+                };
+
+                pkg = await tempchaincode.package(packageRequest);
+                pkgBuffer = Buffer.from(pkg);
+            }
+
+            await fs.writeFile(pkgFile, pkgBuffer);
+            Reporter.instance().sendTelemetryEvent('packageCommand', { packageType: fileExtension });
 
             await vscode.commands.executeCommand(ExtensionCommands.REFRESH_PACKAGES);
             outputAdapter.log(LogType.SUCCESS, `Smart Contract packaged: ${pkgFile}`);
 
-            const fileNames: string[] = pkg.fileNames;
+            // TODO make this work for new format
+            if (!tar) {
+                const fileNames: string[] = pkg.fileNames;
 
-            outputAdapter.log(LogType.INFO, undefined, `${fileNames.length} file(s) packaged:`);
-            for (const file of fileNames) {
-                outputAdapter.log(LogType.INFO, undefined, `- ${file}`);
+                outputAdapter.log(LogType.INFO, undefined, `${fileNames.length} file(s) packaged:`);
+                for (const file of fileNames) {
+                    outputAdapter.log(LogType.INFO, undefined, `- ${file}`);
+                }
             }
             const packageEntry: PackageRegistryEntry = new PackageRegistryEntry();
             packageEntry.name = properties.workspacePackageName;

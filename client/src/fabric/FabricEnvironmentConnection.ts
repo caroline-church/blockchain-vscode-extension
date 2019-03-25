@@ -31,10 +31,11 @@ import { FabricEnvironment } from './FabricEnvironment';
 
 export class FabricEnvironmentConnection implements IFabricEnvironmentConnection {
 
+    protected client: Client;
+
     private outputAdapter: OutputAdapter;
     private environment: FabricEnvironment;
     private nodes: Map<string, FabricNode> = new Map<string, FabricNode>();
-    private client: Client;
     private peers: Map<string, Client.Peer> = new Map<string, Client.Peer>();
     private orderers: Map<string, Client.Orderer> = new Map<string, Client.Orderer>();
     private certificateAuthorities: Map<string, FabricCAServices> = new Map<string, FabricCAServices>();
@@ -296,6 +297,74 @@ export class FabricEnvironmentConnection implements IFabricEnvironmentConnection
         return fabricWalletGenerator.createLocalWallet(walletName);
     }
 
+    protected getPeer(peerName: string): Client.Peer {
+        if (!this.peers.has(peerName)) {
+            throw new Error(`The Fabric peer ${peerName} does not exist`);
+        }
+        return this.peers.get(peerName);
+    }
+
+    protected async setNodeContext(nodeName: string): Promise<void> {
+        const node: FabricNode = this.getNode(nodeName);
+        const walletName: string = node.wallet;
+        const identityName: string = node.identity;
+        const fabricWalletGenerator: IFabricWalletGenerator = FabricWalletGeneratorFactory.createFabricWalletGenerator();
+        const fabricWallet: IFabricWallet = await fabricWalletGenerator.createLocalWallet(walletName);
+        await fabricWallet['setUserContext'](this.client, identityName);
+    }
+
+    protected async getAllChannelNamesForPeer(peerName: string): Promise<Array<string>> {
+        const peer: Client.Peer = this.getPeer(peerName);
+        await this.setNodeContext(peerName);
+        const channelQueryResponse: Client.ChannelQueryResponse = await this.client.queryChannels(peer);
+        return channelQueryResponse.channels.map((channel: Client.ChannelInfo) => channel.channel_id).sort();
+    }
+
+    protected getOrCreateChannel(channelName: string): Client.Channel {
+        let channel: Client.Channel = this.client.getChannel(channelName, false);
+        if (!channel) {
+            channel = this.client.newChannel(channelName);
+        }
+        return channel;
+    }
+
+    protected async getOrdererForChannel(peers: Client.Peer[], channel: Client.Channel): Promise<Client.Orderer> {
+
+        // Get and decode the channel configuration, which contains an array of orderer addresses.
+        const configEnvelope: any = await channel.getChannelConfig(peers[0]);
+        const loadedConfigEnvelope: any = channel.loadConfigEnvelope(configEnvelope);
+
+        // Check for a direct match against the "name" (aka host) of the orderer.
+        for (const ordererHost of loadedConfigEnvelope.orderers as string[]) {
+            for (const orderer of this.orderers.values()) {
+                if (orderer.getName() === ordererHost) {
+                    return orderer;
+                }
+            }
+        }
+
+        // We didn't find a direct match - if all the peers are local, then it's a good chance the orderer
+        // is local and we need to force the hostname to localhost - if not, throw an error.
+        const areAllPeersLocal: boolean = this.areAllPeersLocal(peers);
+        if (!areAllPeersLocal) {
+            throw new Error(`Failed to find Fabric orderer(s) ${loadedConfigEnvelope.orderers.join(', ')} for channel ${channel.getName()}`);
+        }
+
+        // Check for a match against the port of the orderer.
+        for (const ordererHost of loadedConfigEnvelope.orderers as string[]) {
+            const ordererPort: string = ordererHost.split(':')[1];
+            for (const orderer of this.orderers.values()) {
+                if (orderer.getName() === `localhost:${ordererPort}`) {
+                    return orderer;
+                }
+            }
+        }
+
+        // Couldn't find any match.
+        throw new Error(`Failed to find Fabric orderer(s) ${loadedConfigEnvelope.orderers.join(', ')} for channel ${channel.getName()}`);
+
+    }
+
     private async instantiateOrUpgradeChaincode(name: string, version: string, peerNames: Array<string>, channelName: string, fcn: string, args: Array<string>, collectionsConfig: string, upgrade: boolean): Promise<Buffer> {
 
         const peers: Array<Client.Peer> = [];
@@ -437,42 +506,11 @@ export class FabricEnvironmentConnection implements IFabricEnvironmentConnection
 
     }
 
-    private async setNodeContext(nodeName: string): Promise<void> {
-        const node: FabricNode = this.getNode(nodeName);
-        const walletName: string = node.wallet;
-        const identityName: string = node.identity;
-        const fabricWalletGenerator: IFabricWalletGenerator = FabricWalletGeneratorFactory.createFabricWalletGenerator();
-        const fabricWallet: IFabricWallet = await fabricWalletGenerator.createLocalWallet(walletName);
-        await fabricWallet['setUserContext'](this.client, identityName);
-    }
-
-    private getPeer(peerName: string): Client.Peer {
-        if (!this.peers.has(peerName)) {
-            throw new Error(`The Fabric peer ${peerName} does not exist`);
-        }
-        return this.peers.get(peerName);
-    }
-
     private getCertificateAuthority(certificateAuthorityName: string): FabricCAServices {
         if (!this.certificateAuthorities.has(certificateAuthorityName)) {
             throw new Error(`The Fabric certificate authority ${certificateAuthorityName} does not exist`);
         }
         return this.certificateAuthorities.get(certificateAuthorityName);
-    }
-
-    private getOrCreateChannel(channelName: string): Client.Channel {
-        let channel: Client.Channel = this.client.getChannel(channelName, false);
-        if (!channel) {
-            channel = this.client.newChannel(channelName);
-        }
-        return channel;
-    }
-
-    private async getAllChannelNamesForPeer(peerName: string): Promise<Array<string>> {
-        const peer: Client.Peer = this.getPeer(peerName);
-        await this.setNodeContext(peerName);
-        const channelQueryResponse: Client.ChannelQueryResponse = await this.client.queryChannels(peer);
-        return channelQueryResponse.channels.map((channel: Client.ChannelInfo) => channel.channel_id).sort();
     }
 
     private isPeerLocal(peer: Client.Peer): boolean {
@@ -487,42 +525,4 @@ export class FabricEnvironmentConnection implements IFabricEnvironmentConnection
     private areAllPeersLocal(peers: Client.Peer[]): boolean {
         return peers.every((peer: Client.Peer) => this.isPeerLocal(peer));
     }
-
-    private async getOrdererForChannel(peers: Client.Peer[], channel: Client.Channel): Promise<Client.Orderer> {
-
-        // Get and decode the channel configuration, which contains an array of orderer addresses.
-        const configEnvelope: any = await channel.getChannelConfig(peers[0]);
-        const loadedConfigEnvelope: any = channel.loadConfigEnvelope(configEnvelope);
-
-        // Check for a direct match against the "name" (aka host) of the orderer.
-        for (const ordererHost of loadedConfigEnvelope.orderers as string[]) {
-            for (const orderer of this.orderers.values()) {
-                if (orderer.getName() === ordererHost) {
-                    return orderer;
-                }
-            }
-        }
-
-        // We didn't find a direct match - if all the peers are local, then it's a good chance the orderer
-        // is local and we need to force the hostname to localhost - if not, throw an error.
-        const areAllPeersLocal: boolean = this.areAllPeersLocal(peers);
-        if (!areAllPeersLocal) {
-            throw new Error(`Failed to find Fabric orderer(s) ${loadedConfigEnvelope.orderers.join(', ')} for channel ${channel.getName()}`);
-        }
-
-        // Check for a match against the port of the orderer.
-        for (const ordererHost of loadedConfigEnvelope.orderers as string[]) {
-            const ordererPort: string = ordererHost.split(':')[1];
-            for (const orderer of this.orderers.values()) {
-                if (orderer.getName() === `localhost:${ordererPort}`) {
-                    return orderer;
-                }
-            }
-        }
-
-        // Couldn't find any match.
-        throw new Error(`Failed to find Fabric orderer(s) ${loadedConfigEnvelope.orderers.join(', ')} for channel ${channel.getName()}`);
-
-    }
-
 }
