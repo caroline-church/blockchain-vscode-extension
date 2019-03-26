@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IBM Blockchain Platform</title>
+    <style>
+    @import url('../resources/fonts');
+
+        body {
+            font-family:'IBM Plex Sans', Arial, Helvetica, sans-serif;
+            display: flex;
+            padding: 40px;
+            font-size: 13px;
+            letter-spacing:0.05px;
+        }
+
+        a {
+            text-decoration: none;
+            font-weight: 400;
+        }
+
+        a:hover{
+            text-decoration:underline;
+        }
+
+        p {
+            margin-top: 6px;
+            margin-bottom: 6px;
+        }
+
+        h1{
+            font-size:24px;
+            letter-spacing:0.06px;
+            font-weight:600;
+        }
+
+        h2 {
+            font-size: 16px;
+            letter-spacing:0.05px;
+            font-weight: 600;
+        }
+
+        h3 {
+            font-size: 16px;
+            letter-spacing:0.06px;
+        }
+
+        /*
+        ##############################################
+        ### Generic Styling ###
+        ##############################################
+        */
+
+        #gallery-container{
+            flex:1;
+            display:flex;
+            flex-direction:column;
+        }
+
+        #gallery-title{
+            margin-bottom:20px;
+        }
+
+        #gallery-name{
+            margin-top: 0
+        }      
+
+        #gallery-content{
+            
+        } 
+
+        #filters {
+            margin-bottom: 16px
+        }
+
+        #filters input {
+            margin-right: 8px;
+        }
+
+        #samples {
+            flex:1;
+            display:flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+        } 
+
+        .sample-tile {
+            margin-bottom: 16px;
+            margin-right: 16px;
+            width: 300px;
+            height: 200px;
+            padding: 16px;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        
+        .sample-tile.official {
+            display: flex;
+        }
+
+        .sample-tile.community {
+            display: flex
+        }
+
+        #sample-type {
+            border-radius: 25px;
+            padding: 0px 5px;
+        }
+        
+        .sample-title {
+            margin: 0;
+        }
+
+        .sample-sub-text{
+            margin-bottom: 0;
+        }
+
+        .repository-name{
+            margin-top:5px;
+            margin-bottom:5px;
+            font-weight:100;
+            font-style:italic;
+            letter-spacing:0.06px;
+        }
+
+        .sample-description{
+            margin-bottom:20px;
+        }
+
+        /*
+        ##############################################
+        ### Styling for vscode-dark grouped themes ###
+        ##############################################
+        */
+
+        body.vscode-dark{
+            color: #ffffff;
+        }
+
+        body.vscode-dark .sample-tile {
+            background-color: #282828;
+        }
+
+        body.vscode-dark .sample-tile.official #sample-type {
+           
+        }
+
+        body.vscode-dark .sample-tile.official #sample-type {
+           
+        }
+
+        body.vscode-dark .repository-name {
+            color: #B1B1B1;
+        }
+
+        /*
+        ##############################################
+        ### Styling for vscode-light grouped themes ###
+        ##############################################
+        */
+
+        body.vscode-light {
+            color: #000000;
+        }
+
+        body.vscode-light .sample-tile {
+            background-color: #F3F3F3;
+        }
+
+        body.vscode-light .sample-tile.official #sample-type {
+           color: white;
+           background-color: #006ab1;
+           border: 1px solid #006ab1;
+        }
+
+        body.vscode-light .sample-tile.community #sample-type {
+            border: 1px solid #000000;
+        }
+
+        body.vscode-dark #repository-name {
+            color: #F3F3F3;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="sample-gallery-container">
+        <div id="gallery-title">
+            <h1 id="gallery-name">Samples Gallery for IBM Blockchain Platform</h1>
+            <p class="gallery-description">
+                Some information about the samples gallery that we can update later
+            </p>
+            <p class="gallery-description">
+                "Official" samples are contributed and supported by the IBM Blockchain team, whilst "Community" samples come from other developers and are supported by them.
+            </p>
+        </div>
+        <div id="gallery-content">  
+            <div id="filters">
+                <input type="checkbox" checked="true" value="official" onclick="filterSamples(this);">Official samples
+                <input type="checkbox" checked="true" value="community" onclick="filterSamples(this);">Community samples
+            </div>
+            <div id="samples">       
+            <% for (const repository of repositories) { %>
+                <% for (const sample of repository.samples) { %>
+                <div class="sample-tile <%=sample.type%>">
+                    <div class="sample-header">
+                        <div class="sample-icon">
+                        </div>
+                        <div class=sample-header-info>
+                            <h3 class="sample-title">                    
+                                <a href='command:<%=commands.OPEN_SAMPLE_PAGE%>?<%= encodeURIComponent(JSON.stringify([repository.name,sample.name])); %>'><%=sample.name%></a>
+                            </h3>
+                            <h4 class="repository-name"><%=repository.name%></h4>
+                            <p class="sample-description"><%=sample.description%></p>
+                        </div>   
+                    </div> 
+                    <div class="sample-bottom"> 
+                        <span id="sample-type"><%=sample.type%></span>
+                        <span><%=sample.tags%></span>
+                    </div>
+                </div>
+                <% } %>
+            <% } %> 
+            </div>           
+        </div>
+    </div>
+    <script>
+
+        const vscode = acquireVsCodeApi();
+
+        function openSample(repoName, sampleName) {
+            vscode.postMessage({
+                command: 'openSample',
+                repoName: repoName,
+                sampleName: sampleName
+            });
+        }
+
+        function filterSamples(checkbox) {
+            console.log(checkbox.checked);
+            console.log(checkbox.value);
+
+            const elements = document.getElementsByClassName(checkbox.value);
+            console.log(elements);
+            for(const element of elements) {
+                console.log(element);
+                if(checkbox.checked === true) {
+                    console.log('banana');
+                    element.style.display = "flex";
+                } else {
+                    console.log('fish');
+                    element.style.display = "none";
+                }
+            }
+
+        }
+        
+    </script>
+</body>
+
+</html>

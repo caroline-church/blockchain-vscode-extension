@@ -74,6 +74,7 @@ import { importSmartContractPackageCommand } from './commands/importSmartContrac
 import { CertificateAuthorityTreeItem } from './explorer/runtimeOps/CertificateAuthorityTreeItem';
 import { FabricJavaDebugConfigurationProvider } from './debug/FabricJavaDebugConfigurationProvider';
 import { debugCommandList } from './commands/debugCommandListCommand';
+import { SamplesGalleryView } from './webview/SamplesGalleryView';
 
 let blockchainGatewayExplorerProvider: BlockchainGatewayExplorerProvider;
 let blockchainPackageExplorerProvider: BlockchainPackageExplorerProvider;
@@ -215,7 +216,7 @@ export async function registerCommands(context: vscode.ExtensionContext): Promis
 
     context.subscriptions.push(vscode.commands.registerCommand(ExtensionCommands.OPEN_HOME_PAGE, async () => await HomeView.openHomePage(context)));
     context.subscriptions.push(vscode.commands.registerCommand(ExtensionCommands.OPEN_SAMPLE_PAGE, async (repoName: string, sampleName: string) => await SampleView.openContractSample(context, repoName, sampleName)));
-
+    context.subscriptions.push(vscode.commands.registerCommand(ExtensionCommands.OPEN_SAMPLES_GALLERY_PAGE, async () => await SamplesGalleryView.openSampleGalleryPage(context)));
     context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(async (e: any) => {
 
         if (e.affectsConfiguration('fabric.gateways') || e.affectsConfiguration('fabric.runtime')) {

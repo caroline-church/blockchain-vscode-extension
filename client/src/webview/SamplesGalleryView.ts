@@ -21,18 +21,17 @@ import { ExtensionCommands } from '../../ExtensionCommands';
 
 let openPanels: Array<vscode.WebviewPanel> = [];
 
-export class HomeView {
+export class SamplesGalleryView {
 
-    static async openHomePage(context: vscode.ExtensionContext): Promise<any> {
+    static async openSampleGalleryPage(context: vscode.ExtensionContext): Promise<any> {
 
         // Check to see if the panel is already open
-
         openPanels = openPanels.filter((_panel: vscode.WebviewPanel) => {
             return _panel['_isDisposed'] !== true;
         });
 
         let panel: vscode.WebviewPanel = openPanels.find((tempPanel: vscode.WebviewPanel) => {
-            return tempPanel.title === `IBM Blockchain Platform Home`;
+            return tempPanel.title === `Samples Gallery`;
         });
 
         if (panel) {
@@ -42,8 +41,8 @@ export class HomeView {
 
             // Create the Home panel
             panel = vscode.window.createWebviewPanel(
-                'extensionHome', // Identifies the type of the webview. Used internally
-                'IBM Blockchain Platform Home', // Title of the panel displayed to the user
+                'samplesGallery', // Identifies the type of the webview. Used internally
+                'Samples Gallery', // Title of the panel displayed to the user
                 vscode.ViewColumn.One, // Editor column to show the new webview panel in.
                 {
                     enableScripts: true,
@@ -61,17 +60,14 @@ export class HomeView {
             panel.iconPath = panelIcon;
 
             // Set the webview's html
-            panel.webview.html = await this.getExtensionHomepage();
+            panel.webview.html = await this.getSamplesGalleryPage();
 
             // Keep track of the panels open
             openPanels.push(panel);
 
             // Handle messages from the webview
             panel.webview.onDidReceiveMessage(async (message: any) => {
-                if (message.command === 'command') {
-                    // Used for running VS Code commands directly from the webviews
-                    await vscode.commands.executeCommand(message.executeCommand);
-                } else if (message.command === 'openSample') {
+                if (message.command === 'openSample') {
                     // Creates and opens a webview for the given sample
                     await vscode.commands.executeCommand(ExtensionCommands.OPEN_SAMPLE_PAGE, message.repoName, message.sampleName);
                 }
@@ -81,27 +77,13 @@ export class HomeView {
             panel.onDidDispose(() => {
                 // Delete the closed panel from the list of open panels
                 openPanels = openPanels.filter((tempPanel: vscode.WebviewPanel) => {
-                    return tempPanel.title !== `IBM Blockchain Platform Home`;
+                    return tempPanel.title !== `Samples Gallery`;
                 });
             }, null, context.subscriptions);
         }
     }
 
-    static async getHomePage(options: any): Promise<any> {
-        const templatePath: string = path.join(__dirname, '..', '..', '..', 'templates', 'HomeView.ejs');
-        return await new Promise ((resolve: any, reject: any): any => {
-            ejs.renderFile(templatePath, options, {async: true}, (error: any, data: string) => {
-                if (error) {
-                    reject(error);
-                } else {
-                    console.log('data', data);
-                    resolve(data);
-                }
-             });
-        });
-    }
-
-    static async getExtensionHomepage(): Promise<string> {
+    static async getSamplesGalleryPage(): Promise<any> {
         const packageJson: any = await ExtensionUtil.getPackageJSON();
         const extensionVersion: string = packageJson.version;
         const extensionPath: string = ExtensionUtil.getExtensionPath();
@@ -111,21 +93,23 @@ export class HomeView {
 
         const options: any = {
             extensionVersion: extensionVersion,
-            commands : {
-                CREATE_SMART_CONTRACT_PROJECT: ExtensionCommands.CREATE_SMART_CONTRACT_PROJECT,
-                PACKAGE_SMART_CONTRACT: ExtensionCommands.PACKAGE_SMART_CONTRACT,
-                INSTALL_SMART_CONTRACT: ExtensionCommands.INSTALL_SMART_CONTRACT,
-                INSTANTIATE_SMART_CONTRACT: ExtensionCommands.INSTANTIATE_SMART_CONTRACT,
-                TEST_SMART_CONTRACT: ExtensionCommands.TEST_SMART_CONTRACT,
-                UPGRADE_SMART_CONTRACT: ExtensionCommands.UPGRADE_SMART_CONTRACT,
-                OPEN_SAMPLE_PAGE: ExtensionCommands.OPEN_SAMPLE_PAGE,
-                OPEN_SAMPLES_GALLERY_PAGE: ExtensionCommands.OPEN_SAMPLES_GALLERY_PAGE
+            commands: {
+                OPEN_SAMPLE_PAGE: ExtensionCommands.OPEN_SAMPLE_PAGE
             },
             marketplaceIcon: marketplaceIcon,
             repositories: repositories
         };
 
-        const homeString: string = await HomeView.getHomePage(options);
-        return homeString;
+        const templatePath: string = path.join(__dirname, '..', '..', '..', 'templates', 'SamplesGalleryView.ejs');
+        return await new Promise((resolve: any, reject: any): any => {
+            ejs.renderFile(templatePath, options, { async: true }, (error: any, data: string) => {
+                if (error) {
+                    reject(error);
+                } else {
+                    console.log('data', data);
+                    resolve(data);
+                }
+            });
+        });
     }
 }

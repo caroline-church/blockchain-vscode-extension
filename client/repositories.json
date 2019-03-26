@@ -7,6 +7,8 @@
                 {
                     "name": "FabCar",
                     "description": "Basic sample demonstrating the transfer of vehicle ownership.",
+                    "type": "official",
+                    "tags": ["go", "javascript", "typescript", "smart contract", "application"],
                     "readme": "https://raw.githubusercontent.com/hyperledger/fabric-samples/release-1.4/README.md",
                     "category":{
                         "contracts":[
@@ -102,6 +104,8 @@
                 {
                     "name": "Commercial Paper",
                     "description": "Issue, buy and redeem commercial papers using PaperNet, a Hyperledger Fabric blockchain network.",
+                    "type": "official",
+                    "tags": ["javascript", "smart contract", "application"],
                     "readme": "https://raw.githubusercontent.com/hyperledger/fabric-samples/release-1.4/README.md",
                     "category":{
                         "contracts":[

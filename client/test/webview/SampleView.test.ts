@@ -184,8 +184,7 @@ describe('SampleView', () => {
         getContract.returns(repositories[0].samples[0].category['contracts'][0]);
 
         sendCommandWithOutputAndProgress = mySandBox.stub(CommandUtil, 'sendCommandWithOutputAndProgress').resolves();
-
-    } );
+    });
 
     afterEach(() => {
         mySandBox.restore();
