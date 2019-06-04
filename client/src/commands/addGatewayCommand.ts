@@ -22,7 +22,7 @@ import { FabricGatewayHelper } from '../fabric/FabricGatewayHelper';
 import { FabricGatewayRegistry } from '../fabric/FabricGatewayRegistry';
 import { FabricRuntimeUtil } from '../fabric/FabricRuntimeUtil';
 
-export async function addGateway(): Promise<{} | void> {
+export async function addGateway(connectionProfile?: any): Promise<{} | void> {
     const outputAdapter: VSCodeBlockchainOutputAdapter = VSCodeBlockchainOutputAdapter.instance();
     try {
         outputAdapter.log(LogType.INFO, undefined, 'addGateway');
@@ -39,27 +39,35 @@ export async function addGateway(): Promise<{} | void> {
             throw new Error('A gateway with this name already exists.');
         }
 
-        const quickPickItems: string[] = [UserInputUtil.BROWSE_LABEL];
-        const openDialogOptions: vscode.OpenDialogOptions = {
-            canSelectFiles: true,
-            canSelectFolders: false,
-            canSelectMany: false,
-            openLabel: 'Select',
-            filters: {
-                'Connection Profiles' : ['json', 'yaml', 'yml']
-            }
-        };
+        let connectionProfilePath: string;
+        if (connectionProfile) {
+            connectionProfilePath = await FabricGatewayHelper.saveConnectionProfile(gatewayName, connectionProfile);
 
-        // Get the connection profile json file path
-        const connectionProfilePath: string = await UserInputUtil.browse('Enter a file path to a connection profile file', quickPickItems, openDialogOptions) as string;
-        if (!connectionProfilePath) {
-            return Promise.resolve();
+        } else {
+            const quickPickItems: string[] = [UserInputUtil.BROWSE_LABEL];
+            const openDialogOptions: vscode.OpenDialogOptions = {
+                canSelectFiles: true,
+                canSelectFolders: false,
+                canSelectMany: false,
+                openLabel: 'Select',
+                filters: {
+                    'Connection Profiles': ['json', 'yaml', 'yml']
+                }
+            };
+
+            // Get the connection profile json file path
+            connectionProfilePath = await UserInputUtil.browse('Enter a file path to a connection profile file', quickPickItems, openDialogOptions) as string;
+            if (!connectionProfilePath) {
+                return Promise.resolve();
+            }
+
+            connectionProfilePath = await FabricGatewayHelper.copyConnectionProfile(gatewayName, connectionProfilePath);
         }
 
         const fabricGatewayEntry: FabricGatewayRegistryEntry = new FabricGatewayRegistryEntry();
         // Copy the user given connection profile to the gateway directory (in the blockchain extension directory)
         fabricGatewayEntry.name = gatewayName;
-        fabricGatewayEntry.connectionProfilePath = await FabricGatewayHelper.copyConnectionProfile(gatewayName, connectionProfilePath);
+        fabricGatewayEntry.connectionProfilePath = connectionProfilePath;
         fabricGatewayEntry.associatedWallet = '';
         await fabricGatewayRegistry.add(fabricGatewayEntry);
 

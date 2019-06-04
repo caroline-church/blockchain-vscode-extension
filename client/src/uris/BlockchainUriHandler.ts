@@ -13,7 +13,7 @@
 */
 
 import { UriHandler, Uri } from 'vscode';
-import { sampleUriHandler } from './SampleUriHandler';
+import { connectionUriHandler } from './ConnectionUriHandler';
 import { VSCodeBlockchainOutputAdapter } from '../logging/VSCodeBlockchainOutputAdapter';
 import { LogType } from '../logging/OutputAdapter';
 
@@ -27,8 +27,8 @@ export class BlockchainUriHandler implements UriHandler {
 
     public async handleUri(uri: Uri): Promise<void> {
         try {
-            if (uri.path === '/sample') {
-                await sampleUriHandler(uri);
+            if (uri.path === '/connection') {
+                await connectionUriHandler(uri);
             } else {
                 VSCodeBlockchainOutputAdapter.instance().log(LogType.ERROR, `Unrecognized path ${uri.path} for URI`);
             }

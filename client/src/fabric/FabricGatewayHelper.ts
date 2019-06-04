@@ -92,4 +92,17 @@ export class FabricGatewayHelper {
         }
     }
 
+    public static async saveConnectionProfile(gatewayName: string, connectionProfileData: string): Promise<string> {
+        const extDir: string = vscode.workspace.getConfiguration().get(SettingConfigurations.EXTENSION_DIRECTORY);
+        const homeExtDir: string = UserInputUtil.getDirPath(extDir);
+        const profileDirPath: string = path.join(homeExtDir, gatewayName);
+        const profilePath: string = path.join(profileDirPath, 'connection.json');
+
+        await fs.mkdirs(profileDirPath);
+        // Write the new connection profile to the blockchain extension directory
+        await fs.writeFile(profilePath, connectionProfileData);
+
+        return profilePath;
+    }
+
 }

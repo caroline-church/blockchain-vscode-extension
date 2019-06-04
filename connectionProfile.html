@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+    <button onclick="openVscode()">Add Gateway</button>
+</body>
+
+<script>
+
+  function openVscode() {
+    const connectionProfile = {
+    "name": "channel1",
+    "description": "Network on IBP v2",
+    "version": "1.0.0",
+    "client": {
+        "organization": "org1msp"
+    },
+    "organizations": {
+        "org1msp": {
+            "mspid": "org1msp",
+            "peers": [
+                "184.173.1.162:30814"
+            ],
+            "certificateAuthorities": [
+                "184.173.1.162:31736"
+            ]
+        }
+    },
+    "orderers": {
+        "184.173.1.162:30559": {
+            "url": "grpcs://184.173.1.162:30559",
+            "tlsCACerts": {
+                "pem": "-----BEGIN CERTIFICATE-----\\nMIICNzCCAd6gAwIBAgIUbulyUG8qqYqnN0coo5HhmLYeBY0wCgYIKoZIzj0EAwIw\\nbTELMAkGA1UEBhMCVVMxFzAVBgNVBAgTDk5vcnRoIENhcm9saW5hMRQwEgYDVQQK\\nEwtIeXBlcmxlZGdlcjEPMA0GA1UECxMGRmFicmljMR4wHAYDVQQDExVPcmRlcmlu\\nZ1NlcnZpY2VDQS10bHMwHhcNMTkwNTI4MTUxNzAwWhcNMzQwNTI0MTUxNzAwWjBt\\nMQswCQYDVQQGEwJVUzEXMBUGA1UECBMOTm9ydGggQ2Fyb2xpbmExFDASBgNVBAoT\\nC0h5cGVybGVkZ2VyMQ8wDQYDVQQLEwZGYWJyaWMxHjAcBgNVBAMTFU9yZGVyaW5n\\nU2VydmljZUNBLXRsczBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABPfauRjWlZOc\\n0deh/88LiDgfrly+o7Br8nCfXGWlTyCJZkz8b+9dZb0KHizOJp2Fu64rbiS2McBs\\nBiW6gCzNuQWjXDBaMA4GA1UdDwEB/wQEAwIBBjASBgNVHRMBAf8ECDAGAQH/AgEB\\nMB0GA1UdDgQWBBQ2r33jM6sm4CQMxqWrwxEZX3T+qzAVBgNVHREEDjAMhwS4rQGi\\nhwQKL09uMAoGCCqGSM49BAMCA0cAMEQCIDrsWVF+ArtlmXRr2BOD3MB+z13AbBk3\\n5wp0e4p2g+OIAiAdCUngWMDg9hVXUM+6M5N/GuQReZpnE/TKtvJtNWe/TA==\\n-----END CERTIFICATE-----\\n"
+            }
+        }
+    },
+    "peers": {
+        "184.173.1.162:30814": {
+            "url": "grpcs://184.173.1.162:30814",
+            "tlsCACerts": {
+                "pem": "-----BEGIN CERTIFICATE-----\\nMIICIzCCAcqgAwIBAgIUMiEIwxNk9QkfQpQZkntwQ4IXlyowCgYIKoZIzj0EAwIw\\nYzELMAkGA1UEBhMCVVMxFzAVBgNVBAgTDk5vcnRoIENhcm9saW5hMRQwEgYDVQQK\\nEwtIeXBlcmxlZGdlcjEPMA0GA1UECxMGRmFicmljMRQwEgYDVQQDEwtPcmcxQ0Ey\\nLXRsczAeFw0xOTA1MjgxNTA4MDBaFw0zNDA1MjQxNTA4MDBaMGMxCzAJBgNVBAYT\\nAlVTMRcwFQYDVQQIEw5Ob3J0aCBDYXJvbGluYTEUMBIGA1UEChMLSHlwZXJsZWRn\\nZXIxDzANBgNVBAsTBkZhYnJpYzEUMBIGA1UEAxMLT3JnMUNBMi10bHMwWTATBgcq\\nhkjOPQIBBggqhkjOPQMBBwNCAAQbGA3L2Ip1c97ULb0VBULxeDF8vsxw6/riO590\\noRkUTb8wKzpEBCdWNQCgO8vvMdFHVgosz61JWRKo0iGiF0hHo1wwWjAOBgNVHQ8B\\nAf8EBAMCAQYwEgYDVR0TAQH/BAgwBgEB/wIBATAdBgNVHQ4EFgQUs7Mvpq6VztyS\\ntHQG53YqFz1MMNUwFQYDVR0RBA4wDIcEuK0BoocECi9PbjAKBggqhkjOPQQDAgNH\\nADBEAiBaXm8N6IPanjjrYmT4fYf7pBftrS7HrKf5AdnjUWKDwwIgLIxuIAyC/qNB\\nSBY6lNkXu5J/4/xFTIRsG14wcvP/I1o=\\n-----END CERTIFICATE-----\\n"
+            },
+            "grpcOptions": {
+                "ssl-target-name-override": "184.173.1.162"
+            }
+        }
+    },
+    "certificateAuthorities": {
+        "184.173.1.162:31736": {
+            "url": "https://184.173.1.162:31736",
+            "caName": "ca",
+            "tlsCACerts": {
+                "pem": "-----BEGIN CERTIFICATE-----\\r\\nMIICdzCCAeCgAwIBAgIJI5k/DG86IapRMA0GCSqGSIb3DQEBBQUAMHMxFjAUBgNV\\r\\nBAMTDTE4NC4xNzMuMS4xNjIxCzAJBgNVBAYTAlVTMRcwFQYDVQQIEw5Ob3J0aCBD\\r\\nYXJvbGluYTEQMA4GA1UEBxMHUmFsZWlnaDEMMAoGA1UEChMDSUJNMRMwEQYDVQQL\\r\\nEwpCbG9ja2NoYWluMB4XDTE5MDUyODE1MTMwNVoXDTIwMDUyNzE1MTMwNVowczEW\\r\\nMBQGA1UEAxMNMTg0LjE3My4xLjE2MjELMAkGA1UEBhMCVVMxFzAVBgNVBAgTDk5v\\r\\ncnRoIENhcm9saW5hMRAwDgYDVQQHEwdSYWxlaWdoMQwwCgYDVQQKEwNJQk0xEzAR\\r\\nBgNVBAsTCkJsb2NrY2hhaW4wgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBAIp/\\r\\nmkgK5KAj6WVuUpxV+jG+ubif3xhVldCZm2+cRCdqSq3ohaNoxnSPN2avULIf7u7b\\r\\nNqIX/GcQ/DBzBL4+QcC/NcaZAEBh70+KZ2Vey1mPMEVWih/nlgzVmgUaA0dfgRV+\\r\\nsjgJh/WLePJP3keE6JMYJc7y2HiIGFejGsgpT1OfAgMBAAGjEzARMA8GA1UdEQQI\\r\\nMAaHBLitAaIwDQYJKoZIhvcNAQEFBQADgYEAaqarMNCt0quYPZKcuR2ruXcD9TMX\\r\\n+8kwKBIl7XQAtV3GeGVTkh45DRw+LZXw2mIR/jgQBKIcRdTSYtX3Wg58054b+k8y\\r\\n2rBXjb9Q+pP+Loa+3EN3DiyWIokFDXmhSAvK0yzpVGQgkMnTl1FOVdodsCdy1QNa\\r\\n3dI4ZCl6n+LE7fw=\\r\\n-----END CERTIFICATE-----\\r\\n"
+            }
+        }
+    }
+    };
+
+    const connectionProfileString = JSON.stringify(connectionProfile);
+    const url = "vscode://ibmblockchain.ibm-blockchain-platform/connection?connectionProfile=" + encodeURI(connectionProfileString);
+    window.open(url);
+  }
+
+</script>
+</html>
