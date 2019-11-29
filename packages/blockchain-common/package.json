@@ -3,7 +3,7 @@
     "author": "IBMBlockchain",
     "homepage": "https://www.ibm.com/blockchain",
     "license": "Apache-2.0",
-    "version": "1.0.16",
+    "version": "1.0.17",
     "publisher": "IBMBlockchain",
     "repository": {
         "type": "git",
@@ -39,7 +39,7 @@
         "license-check-and-add": "2.3.6",
         "mocha": "^6.1.4",
         "mocha-junit-reporter": "^1.23.1",
-		"mocha-multi-reporters": "^1.1.7",
+        "mocha-multi-reporters": "^1.1.7",
         "nyc": "^14.1.1",
         "rimraf": "^2.6.2",
         "sinon": "6.1.4",
@@ -116,7 +116,12 @@
             "text-summary",
             "html"
         ],
-        "exclude": ["build", "index.ts", "coverage", "test"],
+        "exclude": [
+            "build",
+            "index.ts",
+            "coverage",
+            "test"
+        ],
         "all": true,
         "check-coverage": true,
         "statements": 100,
