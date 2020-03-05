@@ -1,0 +1,5 @@
+@import '../../mixins/layout-mixins.scss';
+
+.page-container {
+    @include default-page-styling;
+}
