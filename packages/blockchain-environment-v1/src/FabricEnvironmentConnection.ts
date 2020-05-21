@@ -38,6 +38,7 @@ import {
 } from 'ibm-blockchain-platform-fabric-admin';
 import {Identity, IdentityProvider} from 'fabric-network';
 import {User} from 'fabric-common';
+import {FabricCollectionDefinition} from 'ibm-blockchain-platform-common/build/src/fabricModel/FabricCollectionDefinition';
 
 export class FabricEnvironmentConnection implements IFabricEnvironmentConnection {
     public environmentName: string;
@@ -175,7 +176,7 @@ export class FabricEnvironmentConnection implements IFabricEnvironmentConnection
         const committedContracts: DefinedSmartContract[] = await channel.getAllCommittedSmartContracts(peerNames[0]);
 
         return committedContracts.map((committedContract: DefinedSmartContract) => {
-            return new FabricSmartContractDefinition(committedContract.smartContractName, committedContract.smartContractVersion, committedContract.sequence, undefined, committedContract.endorsementPolicy);
+            return new FabricSmartContractDefinition(committedContract.smartContractName, committedContract.smartContractVersion, committedContract.sequence, undefined, committedContract.endorsementPolicy, committedContract.collectionConfig);
         });
     }
 
@@ -264,7 +265,8 @@ export class FabricEnvironmentConnection implements IFabricEnvironmentConnection
             smartContractVersion: smartContractDefinition.version,
             packageId: smartContractDefinition.packageId,
             sequence: smartContractDefinition.sequence,
-            endorsementPolicy: smartContractDefinition.endorsementPolicy as string
+            endorsementPolicy: smartContractDefinition.endorsementPolicy as string,
+            collectionConfig: smartContractDefinition.collectionConfig as FabricCollectionDefinition[]
         });
     }
 
@@ -277,7 +279,8 @@ export class FabricEnvironmentConnection implements IFabricEnvironmentConnection
             smartContractName: smartContractDefinition.name,
             smartContractVersion: smartContractDefinition.version,
             sequence: smartContractDefinition.sequence,
-            endorsementPolicy: smartContractDefinition.endorsementPolicy as string
+            endorsementPolicy: smartContractDefinition.endorsementPolicy as string,
+            collectionConfig: smartContractDefinition.collectionConfig as FabricCollectionDefinition[]
         });
     }
 
@@ -290,7 +293,8 @@ export class FabricEnvironmentConnection implements IFabricEnvironmentConnection
             smartContractName: smartContractDefinition.name,
             smartContractVersion: smartContractDefinition.version,
             sequence: smartContractDefinition.sequence,
-            endorsementPolicy: smartContractDefinition.endorsementPolicy as string
+            endorsementPolicy: smartContractDefinition.endorsementPolicy as string,
+            collectionConfig: smartContractDefinition.collectionConfig as FabricCollectionDefinition[]
         });
 
         return Array.from(result.values()).every((value) => value);
@@ -298,6 +302,10 @@ export class FabricEnvironmentConnection implements IFabricEnvironmentConnection
 
     public getEndorsementPolicyBuffer(policy: string): Buffer {
         return LifecycleChannel.getEndorsementPolicyBytes(policy);
+    }
+
+    public getCollectionConfigBuffer(collectionConfig: FabricCollectionDefinition[]): Buffer {
+        return LifecycleChannel.getCollectionConfig(collectionConfig, true);
     }
 
     public async instantiateChaincode(_name: string, _version: string, _peerNames: Array<string>, _channelName: string, _fcn: string, _args: Array<string>, _collectionPath: string, _contractEP: any): Promise<Buffer> {
